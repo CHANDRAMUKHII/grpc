@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	MongoDBService_FetchDataFromMongoDB_FullMethodName = "/pb.MongoDBService/FetchDataFromMongoDB"
+	MongoDBService_FetchDataFromMongoDB_FullMethodName      = "/pb.MongoDBService/FetchDataFromMongoDB"
+	MongoDBService_FetchDataBatchFromMongoDB_FullMethodName = "/pb.MongoDBService/FetchDataBatchFromMongoDB"
 )
 
 // MongoDBServiceClient is the client API for MongoDBService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MongoDBServiceClient interface {
 	FetchDataFromMongoDB(ctx context.Context, in *FetchRequest, opts ...grpc.CallOption) (*FetchResponse, error)
+	FetchDataBatchFromMongoDB(ctx context.Context, in *BatchFetchRequest, opts ...grpc.CallOption) (*BatchFetchResponse, error)
 }
 
 type mongoDBServiceClient struct {
@@ -46,11 +48,21 @@ func (c *mongoDBServiceClient) FetchDataFromMongoDB(ctx context.Context, in *Fet
 	return out, nil
 }
 
+func (c *mongoDBServiceClient) FetchDataBatchFromMongoDB(ctx context.Context, in *BatchFetchRequest, opts ...grpc.CallOption) (*BatchFetchResponse, error) {
+	out := new(BatchFetchResponse)
+	err := c.cc.Invoke(ctx, MongoDBService_FetchDataBatchFromMongoDB_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MongoDBServiceServer is the server API for MongoDBService service.
 // All implementations must embed UnimplementedMongoDBServiceServer
 // for forward compatibility
 type MongoDBServiceServer interface {
 	FetchDataFromMongoDB(context.Context, *FetchRequest) (*FetchResponse, error)
+	FetchDataBatchFromMongoDB(context.Context, *BatchFetchRequest) (*BatchFetchResponse, error)
 	mustEmbedUnimplementedMongoDBServiceServer()
 }
 
@@ -60,6 +72,9 @@ type UnimplementedMongoDBServiceServer struct {
 
 func (UnimplementedMongoDBServiceServer) FetchDataFromMongoDB(context.Context, *FetchRequest) (*FetchResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FetchDataFromMongoDB not implemented")
+}
+func (UnimplementedMongoDBServiceServer) FetchDataBatchFromMongoDB(context.Context, *BatchFetchRequest) (*BatchFetchResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FetchDataBatchFromMongoDB not implemented")
 }
 func (UnimplementedMongoDBServiceServer) mustEmbedUnimplementedMongoDBServiceServer() {}
 
@@ -92,6 +107,24 @@ func _MongoDBService_FetchDataFromMongoDB_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MongoDBService_FetchDataBatchFromMongoDB_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchFetchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MongoDBServiceServer).FetchDataBatchFromMongoDB(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MongoDBService_FetchDataBatchFromMongoDB_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MongoDBServiceServer).FetchDataBatchFromMongoDB(ctx, req.(*BatchFetchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MongoDBService_ServiceDesc is the grpc.ServiceDesc for MongoDBService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -102,6 +135,10 @@ var MongoDBService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FetchDataFromMongoDB",
 			Handler:    _MongoDBService_FetchDataFromMongoDB_Handler,
+		},
+		{
+			MethodName: "FetchDataBatchFromMongoDB",
+			Handler:    _MongoDBService_FetchDataBatchFromMongoDB_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

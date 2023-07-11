@@ -2,17 +2,23 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"time"
 
 	"google.golang.org/grpc"
 
 	pb "bulkapi/pb"
 )
 
-func main() {
+type PatientID struct {
+	ID string `json:"patientid"`
+}
 
-	conn, err := grpc.Dial("localhost:5000", grpc.WithInsecure())
+func main() {
+	conn, err := grpc.Dial("localhost:5002", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -20,19 +26,48 @@ func main() {
 
 	client := pb.NewMongoDBServiceClient(conn)
 
-	parameters := []string{"P003",
-		"P004",
-		"P003"}
-	req := &pb.FetchRequest{
-		Parameters: parameters,
-	}
-
-	resp, err := client.FetchDataFromMongoDB(context.Background(), req)
+	jsonData, err := ioutil.ReadFile("ids_lakh.json")
 	if err != nil {
-		log.Fatalf("request failed: %v", err)
+		log.Fatalf("failed to read JSON file: %v", err)
 	}
 
-	for i, data := range resp.FetchedData {
-		fmt.Printf("MedicalHistory of %s: %s\n", parameters[i], data)
+	var patientIDs []PatientID
+	err = json.Unmarshal(jsonData, &patientIDs)
+	if err != nil {
+		log.Fatalf("failed to unmarshal JSON data: %v", err)
 	}
+	var average time.Duration
+	for i := 0; i < 3; i++ {
+		startTime := time.Now()
+
+		batchSize := 100
+		for i := 0; i < len(patientIDs); i += batchSize {
+			end := i + batchSize
+			if end > len(patientIDs) {
+				end = len(patientIDs)
+			}
+
+			batchRequest := &pb.BatchFetchRequest{}
+			for _, patientID := range patientIDs[i:end] {
+				batchRequest.PatientIds = append(batchRequest.PatientIds, patientID.ID)
+			}
+
+			resp, err := client.FetchDataBatchFromMongoDB(context.Background(), batchRequest)
+			if err != nil {
+				log.Fatalf("request failed: %v", err)
+			}
+
+			for _, fetchedData := range resp.FetchedData {
+				fmt.Println(fetchedData)
+			}
+
+		}
+
+		elapsedTime := time.Since(startTime)
+		average += elapsedTime
+
+		fmt.Println("Total time taken:", elapsedTime)
+	}
+	average /= 3
+	fmt.Print("Average time taken : ", average)
 }
