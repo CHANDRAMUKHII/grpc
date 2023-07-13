@@ -11,9 +11,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const uri = "mongodb+srv://new-user:new-user@cluster0.grve526.mongodb.net/"
@@ -68,28 +66,12 @@ func (s *server) FetchDataBatchFromMongoDB(ctx context.Context, req *pb.BatchFet
 }
 
 func main() {
-	var err error
-
-	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI).SetMaxPoolSize(10000)
-
-	client, err = mongo.Connect(context.Background(), opts)
+	client, err := models.Connection()
+	defer models.DisconnectDB(client)
 
 	if err != nil {
-		panic(err)
+		fmt.Print("Error : ", err)
 	}
-	defer func() {
-		if err = client.Disconnect(context.Background()); err != nil {
-			panic(err)
-		}
-	}()
-
-	var result bson.M
-	if err := client.Database("admin").RunCommand(context.Background(), bson.D{{Key: "ping", Value: 1}}).Decode(&result); err != nil {
-		fmt.Print("Error!")
-		panic(err)
-	}
-	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 
 	lis, err := net.Listen("tcp", ":5002")
 	if err != nil {
