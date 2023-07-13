@@ -21,8 +21,12 @@ type Patient struct {
 	MedicalHistory string `json:"medicalhistory" bson:"medicalhistory"`
 }
 
-func Fetchdata(ctx context.Context, patientID string, client *mongo.Client) string {
-	collection := client.Database("crud").Collection("patients")
+type MongoDBModel struct {
+	Client *mongo.Client
+}
+
+func (m *MongoDBModel) FetchData(ctx context.Context, patientID string) string {
+	collection := m.Client.Database("crud").Collection("patients")
 	var patient Patient
 
 	err := collection.FindOne(ctx, bson.M{"patientid": patientID}).Decode(&patient)
@@ -34,18 +38,17 @@ func Fetchdata(ctx context.Context, patientID string, client *mongo.Client) stri
 	return patient.MedicalHistory
 }
 
-var client *mongo.Client
-
-func Connection() (*mongo.Client, error) {
-	var err error
+func ConnectDB() (*mongo.Client, error) {
 	const uri = "mongodb+srv://new-user:new-user@cluster0.grve526.mongodb.net/"
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err = mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, err
 	}
+
 	// Ping the MongoDB
 	err = client.Ping(ctx, nil)
 	if err != nil {
